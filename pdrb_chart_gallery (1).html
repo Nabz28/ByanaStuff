@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indonesia PDRB Chart Gallery</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:#fff;color:#1B2A4A;display:flex;height:100vh;overflow:hidden}
+.sidebar{width:260px;background:#f7f8fa;border-right:1px solid #e8e9ec;padding:20px 0;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-title{font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#888;padding:0 20px;margin-bottom:16px}
+.sb-section{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#b8bcc8;padding:14px 20px 4px;border-top:1px solid #eaecef;margin-top:6px}
+.sb-section:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.fig-btn{display:block;width:100%;text-align:left;background:none;border:none;padding:10px 20px;font-size:13px;color:#5a5e6b;cursor:pointer;border-left:3px solid transparent;transition:all .15s ease;font-family:inherit;line-height:1.4}
+.fig-btn:hover{background:#eef0f4;color:#1B2A4A}
+.fig-btn.active{background:#e8ecf4;color:#1B2A4A;font-weight:600;border-left-color:#8B2635}
+.fig-btn .fig-num{font-size:11px;font-weight:600;color:#9aa0b0;display:block;margin-bottom:2px}
+.fig-btn.active .fig-num{color:#8B2635}
+.main{flex:1;padding:28px 36px;overflow-y:auto;display:flex;flex-direction:column}
+.chart-header{margin-bottom:14px}
+.chart-title{font-size:18px;font-weight:600;color:#1B2A4A;margin-bottom:4px}
+.chart-subtitle{font-size:13px;color:#888;font-weight:400}
+
+.controls{display:flex;flex-wrap:wrap;gap:10px 18px;padding:10px 14px;background:#fafbfc;border:1px solid #e8e9ec;border-radius:6px;margin-bottom:14px;align-items:center;font-size:12px}
+.ctrl-group{display:flex;align-items:center;gap:6px}
+.ctrl-group label{color:#5a5e6b;font-weight:500;user-select:none;cursor:pointer}
+.ctrl-group input[type="checkbox"]{cursor:pointer;accent-color:#8B2635}
+.ctrl-group select{padding:4px 8px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;font-family:inherit;background:#fff;color:#1B2A4A;cursor:pointer}
+.ctrl-group input[type="color"]{width:30px;height:24px;border:1px solid #d1d5db;border-radius:4px;padding:1px;cursor:pointer;background:#fff}
+.ctrl-divider{width:1px;height:22px;background:#e0e2e6}
+.ctrl-reset{font-size:11px;padding:4px 10px;border:1px solid #d1d5db;background:#fff;color:#6b7280;border-radius:4px;cursor:pointer;font-family:inherit}
+.ctrl-reset:hover{background:#f3f4f6;color:#1B2A4A}
+.sync-badge{font-size:11px;padding:4px 10px;border-radius:12px;background:#f3f4f6;color:#6b7280;font-weight:600;margin-left:auto;white-space:nowrap;letter-spacing:0.3px}
+.sync-badge.loading,.sync-badge.syncing,.sync-badge.pending{background:#fef3c7;color:#92400e}
+.sync-badge.synced{background:#d1fae5;color:#065f46}
+.sync-badge.error{background:#fee2e2;color:#991b1b}
+
+.legend-row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;font-size:12px;color:#6b7280}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-swatch{width:11px;height:11px;border-radius:2px;flex-shrink:0}
+
+.chart-wrap{position:relative;width:100%;min-height:200px;height:460px;max-width:100%;overflow:hidden;border:1px solid transparent;border-radius:4px;transition:border-color .15s;flex-shrink:0}
+.chart-wrap:hover{border-color:#e0e2e6}
+.resize-handle{position:absolute;bottom:0;left:0;right:12px;height:12px;cursor:ns-resize;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;background:linear-gradient(transparent,rgba(0,0,0,.02))}
+.chart-wrap:hover .resize-handle{opacity:1}
+.resize-dots{display:flex;gap:3px}
+.resize-dots span{width:4px;height:4px;border-radius:50%;background:#bbb}
+.resize-handle-r{position:absolute;top:0;right:0;bottom:12px;width:12px;cursor:ew-resize;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;background:linear-gradient(90deg,transparent,rgba(0,0,0,.02))}
+.chart-wrap:hover .resize-handle-r{opacity:1}
+.resize-dots-v{display:flex;flex-direction:column;gap:3px}
+.resize-dots-v span{width:4px;height:4px;border-radius:50%;background:#bbb}
+.resize-corner{position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:nwse-resize;opacity:0;transition:opacity .15s;background:linear-gradient(135deg,transparent 50%,#bbb 50%,#bbb 60%,transparent 60%,transparent 70%,#bbb 70%,#bbb 80%,transparent 80%)}
+.chart-wrap:hover .resize-corner{opacity:.6}
+.size-input{width:58px;padding:3px 6px;border:1px solid #d1d5db;border-radius:4px;font-size:12px;font-family:inherit;color:#1B2A4A;background:#fff;-moz-appearance:textfield}
+.size-input::-webkit-outer-spin-button,.size-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.size-input:focus{outline:none;border-color:#8B2635}
+.size-unit{font-size:11px;color:#9ca3af}
+.ctrl-reset-size{font-size:10px;padding:2px 6px;border:1px solid #d1d5db;background:#fff;color:#6b7280;border-radius:4px;cursor:pointer;font-family:inherit}
+.ctrl-reset-size:hover{background:#f3f4f6}
+.chart-source{font-size:11px;color:#aaa;margin-top:10px}
+.export-row{display:flex;gap:8px;margin-top:14px;align-items:center}
+.export-btn{font-size:12px;padding:6px 14px;border:1px solid #d1d5db;background:#fff;color:#4b5563;border-radius:6px;cursor:pointer;font-family:inherit;transition:all .12s}
+.export-btn:hover{background:#f3f4f6;border-color:#9ca3af}
+.size-hint{font-size:11px;color:#ccc;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="sidebar-title">Indonesia Regional Charts</div>
+  <div class="sb-section">PDRB &amp; Structure</div>
+  <button class="fig-btn active" onclick="showChart(0)"><span class="fig-num">Fig. 1</span>PDRB Nominal Terbesar</button>
+  <button class="fig-btn" onclick="showChart(1)"><span class="fig-num">Fig. 2</span>PDRB per Kapita Tertinggi</button>
+  <button class="fig-btn" onclick="showChart(2)"><span class="fig-num">Fig. 3</span>PDRB per Kapita Terendah</button>
+  <button class="fig-btn" onclick="showChart(3)"><span class="fig-num">Fig. 4</span>Struktur 3 Sektor (Terbesar)</button>
+  <button class="fig-btn" onclick="showChart(4)"><span class="fig-num">Fig. 5</span>Struktur 3 Sektor (Terendah)</button>
+  <button class="fig-btn" onclick="showChart(5)"><span class="fig-num">Fig. 6</span>Inflasi vs Pertumbuhan</button>
+  <button class="fig-btn" onclick="showChart(6)"><span class="fig-num">Fig. 7</span>Investasi vs Pertumbuhan</button>
+  <div class="sb-section">Banking</div>
+  <button class="fig-btn" onclick="showChart(7)"><span class="fig-num">Fig. 8</span>Loan-to-Deposit Ratio</button>
+  <button class="fig-btn" onclick="showChart(8)"><span class="fig-num">Fig. 9</span>Rasio NPL per Kawasan</button>
+  <button class="fig-btn" onclick="showChart(9)"><span class="fig-num">Fig. 10</span>Porsi Kredit UMKM per Kawasan</button>
+  <div class="sb-section">Economic Structure</div>
+  <button class="fig-btn" onclick="showChart(10)"><span class="fig-num">Fig. 11</span>Distribusi Tipologi Ekonomi</button>
+  <button class="fig-btn" onclick="showChart(11)"><span class="fig-num">Fig. 12</span>Konsentrasi HHI 3-Sektor</button>
+  <div class="sb-section">Demographics</div>
+  <button class="fig-btn" onclick="showChart(12)"><span class="fig-num">Fig. 13</span>Populasi Terbesar</button>
+  <button class="fig-btn" onclick="showChart(13)"><span class="fig-num">Fig. 14</span>Kepadatan Penduduk Tertinggi</button>
+  <button class="fig-btn" onclick="showChart(14)"><span class="fig-num">Fig. 15</span>Populasi Working Age</button>
+  <div class="sb-section">PDRB per Kapita Riil</div>
+  <button class="fig-btn" onclick="showChart(15)"><span class="fig-num">Fig. 16</span>PDRB Riil Tertinggi</button>
+  <button class="fig-btn" onclick="showChart(16)"><span class="fig-num">Fig. 17</span>PDRB Riil Terendah</button>
+  <div class="sb-section">Konsumsi &amp; Housing</div>
+  <button class="fig-btn" onclick="showChart(17)"><span class="fig-num">Fig. 18</span>Share Non-Makanan Tertinggi</button>
+  <button class="fig-btn" onclick="showChart(18)"><span class="fig-num">Fig. 19</span>Share Non-Makanan Terendah</button>
+  <button class="fig-btn" onclick="showChart(19)"><span class="fig-num">Fig. 20</span>Status Kepemilikan Rumah</button>
+  <div class="sb-section">Household Assets</div>
+  <button class="fig-btn" onclick="showChart(20)"><span class="fig-num">Fig. 21</span>Kepemilikan Motor</button>
+  <button class="fig-btn" onclick="showChart(21)"><span class="fig-num">Fig. 22</span>Kepemilikan Emas &gt;10g</button>
+  <div class="sb-section">Labor Market</div>
+  <button class="fig-btn" onclick="showChart(22)"><span class="fig-num">Fig. 23</span>TPAK Tertinggi</button>
+  <button class="fig-btn" onclick="showChart(23)"><span class="fig-num">Fig. 24</span>Pengangguran Tertinggi</button>
+</div>
+<div class="main">
+  <div class="chart-header">
+    <div class="chart-title" id="cTitle"></div>
+    <div class="chart-subtitle" id="cSubtitle"></div>
+  </div>
+  <div class="controls">
+    <div class="ctrl-group">
+      <input type="checkbox" id="showLabels" onchange="onLabelsCheckChange()">
+      <label for="showLabels">Data Labels</label>
+    </div>
+    <div class="ctrl-group">
+      <label for="labelStyle">Style:</label>
+      <select id="labelStyle" onchange="onLabelStyleChange()">
+        <option value="simple" selected>No Background</option>
+        <option value="boxed">White Background</option>
+      </select>
+    </div>
+    <div class="ctrl-divider"></div>
+    <div class="ctrl-group" id="colorControls"></div>
+    <div class="ctrl-divider"></div>
+    <button class="ctrl-reset" onclick="resetColors()">Reset Colors</button>
+    <div class="ctrl-divider"></div>
+    <div class="ctrl-group">
+      <label for="widthInput">W:</label>
+      <input type="number" id="widthInput" class="size-input" min="200" max="2400" step="10" onchange="onWidthInput()">
+      <span class="size-unit">px</span>
+      <label for="heightInput">H:</label>
+      <input type="number" id="heightInput" class="size-input" min="200" max="1400" step="10" onchange="onHeightInput()">
+      <span class="size-unit">px</span>
+      <button class="ctrl-reset-size" onclick="resetSize()" title="Reset to default size">↺</button>
+    </div>
+    <div class="sync-badge" id="syncBadge" title="Cross-device sync status">○ Local</div>
+  </div>
+  <div class="legend-row" id="cLegend"></div>
+  <div class="chart-wrap" id="chartWrap">
+    <canvas id="mainCanvas"></canvas>
+    <div class="resize-handle" id="resizeHandle"><div class="resize-dots"><span></span><span></span><span></span></div></div>
+    <div class="resize-handle-r" id="resizeHandleR"><div class="resize-dots-v"><span></span><span></span><span></span></div></div>
+    <div class="resize-corner" id="resizeCorner"></div>
+  </div>
+  <div class="size-hint" id="sizeHint">Drag edges or edit W/H to resize</div>
+  <div class="chart-source" id="cSource"></div>
+  <div class="export-row">
+    <button class="export-btn" onclick="exportPNG()">Export PNG</button>
+  </div>
+</div>
+<script>
+Chart.register(ChartDataLabels);
+
+// ================================================================================
+// =============================== SUPABASE CONFIG ================================
+// ================================================================================
+// Quick setup:
+//   1. Create a project at https://supabase.com (free tier is fine)
+//   2. Open the SQL Editor, paste the contents of "supabase_schema.sql", Run
+//   3. In Project Settings > API, copy your Project URL and anon/public key
+//   4. Paste them below, and set WORKSPACE_ID to any unique string
+//   5. Use the SAME WORKSPACE_ID on every device to sync settings
+// If left as placeholders, the gallery works fine in local-only mode.
+var SUPABASE_URL      = 'https://odgyicbobvksbpdencrr.supabase.co';
+var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9kZ3lpY2JvYnZrc2JwZGVuY3JyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MjIyNjIsImV4cCI6MjA5MjE5ODI2Mn0.-uc7ktB_jvRVpczNO-XhSFAeIdTVpMoK-6xgLMTbKT8';
+var WORKSPACE_ID      = 'narin-lbc';
+// ================================================================================
+
+// Initialize Supabase client (gracefully no-op if config is missing)
+var sb=null,syncReady=false;
+(function initSupabase(){
+  if(typeof window.supabase==='undefined')return;
+  if(!SUPABASE_URL||SUPABASE_URL.indexOf('PASTE_')===0)return;
+  if(!SUPABASE_ANON_KEY||SUPABASE_ANON_KEY.indexOf('PASTE_')===0)return;
+  try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);}
+  catch(e){console.error('Supabase init failed:',e);}
+})();
+
+// Per-chart override for the "Data Labels" checkbox (persisted across sessions)
+var labelsShownOverride={};
+function getLabelsShown(idx){
+  var f=FIGS[idx];
+  return labelsShownOverride[f.id]!==undefined?labelsShownOverride[f.id]:f.labelsDefault;
+}
+
+// Per-chart dimension overrides: { figId: { w: px|null, h: px } }
+// w=null means "fill parent width"; h falls back to f.height then 460.
+var dimensionsOverride={};
+function getDimensions(idx){
+  var f=FIGS[idx];
+  var ov=dimensionsOverride[f.id]||{};
+  return {w: ov.w||null, h: ov.h||f.height||460};
+}
+function applyDimensions(){
+  var d=getDimensions(currentIdx);
+  var cw=document.getElementById('chartWrap');
+  cw.style.width=d.w?d.w+'px':'100%';
+  cw.style.height=d.h+'px';
+  var hint=document.getElementById('sizeHint');
+  if(hint)hint.textContent=Math.round(cw.offsetWidth)+' × '+Math.round(cw.offsetHeight)+' px  —  drag edges or edit W/H';
+  if(chart)chart.resize();
+}
+function syncSizeInputs(){
+  var d=getDimensions(currentIdx);
+  var cw=document.getElementById('chartWrap');
+  var wi=document.getElementById('widthInput');
+  var hi=document.getElementById('heightInput');
+  if(wi)wi.value=d.w||Math.round(cw.offsetWidth);
+  if(hi)hi.value=d.h;
+}
+function onWidthInput(){
+  var v=parseInt(document.getElementById('widthInput').value,10);
+  if(isNaN(v)||v<200)return;
+  var f=FIGS[currentIdx];
+  if(!dimensionsOverride[f.id])dimensionsOverride[f.id]={};
+  dimensionsOverride[f.id].w=v;
+  applyDimensions();
+  queueSave();
+}
+function onHeightInput(){
+  var v=parseInt(document.getElementById('heightInput').value,10);
+  if(isNaN(v)||v<200)return;
+  var f=FIGS[currentIdx];
+  if(!dimensionsOverride[f.id])dimensionsOverride[f.id]={};
+  dimensionsOverride[f.id].h=v;
+  applyDimensions();
+  queueSave();
+}
+function resetSize(){
+  var f=FIGS[currentIdx];
+  delete dimensionsOverride[f.id];
+  applyDimensions();
+  syncSizeInputs();
+  queueSave();
+}
+
+function setSyncStatus(s){
+  var b=document.getElementById('syncBadge');if(!b)return;
+  b.className='sync-badge';
+  if(s==='loading')  {b.classList.add('loading'); b.textContent='⟳ Loading...';}
+  else if(s==='syncing'){b.classList.add('syncing');b.textContent='⟳ Saving...';}
+  else if(s==='pending'){b.classList.add('pending');b.textContent='• Pending';}
+  else if(s==='synced') {b.classList.add('synced'); b.textContent='✓ Synced';}
+  else if(s==='error')  {b.classList.add('error');  b.textContent='⚠ Error';}
+  else                  {b.textContent='○ Local only';}
+}
+
+function gatherState(){
+  var c={};
+  FIGS.forEach(function(f,i){c[f.id]=Object.assign({},colorState[i]);});
+  return {
+    colors:c,
+    labelStyle:document.getElementById('labelStyle').value,
+    labelsShownOverride:Object.assign({},labelsShownOverride),
+    dimensionsOverride:Object.assign({},dimensionsOverride)
+  };
+}
+
+function applyState(state){
+  if(!state)return;
+  if(state.colors){
+    FIGS.forEach(function(f,i){
+      var saved=state.colors[f.id];if(!saved)return;
+      Object.keys(saved).forEach(function(k){
+        if(colorState[i].hasOwnProperty(k))colorState[i][k]=saved[k];
+      });
+    });
+  }
+  if(state.labelStyle){
+    var sel=document.getElementById('labelStyle');
+    if(sel)sel.value=state.labelStyle;
+  }
+  if(state.labelsShownOverride){
+    Object.assign(labelsShownOverride,state.labelsShownOverride);
+  }
+  if(state.dimensionsOverride){
+    Object.assign(dimensionsOverride,state.dimensionsOverride);
+  }
+}
+
+function loadState(){
+  if(!sb){setSyncStatus('local');return;}
+  setSyncStatus('loading');
+  sb.from('gallery_state').select('state').eq('workspace_id',WORKSPACE_ID).maybeSingle()
+    .then(function(res){
+      if(res.error)throw res.error;
+      if(res.data&&res.data.state)applyState(res.data.state);
+      syncReady=true;
+      // Re-apply to the currently visible chart
+      var cb=document.getElementById('showLabels');
+      if(cb)cb.checked=getLabelsShown(currentIdx);
+      buildColorControls();
+      updateChart();
+      applyDimensions();
+      syncSizeInputs();
+      setSyncStatus('synced');
+    })
+    .catch(function(e){
+      console.error('Supabase load failed:',e);
+      setSyncStatus('error');
+    });
+}
+
+var saveTimer=null;
+function queueSave(){
+  if(!sb||!syncReady)return;
+  setSyncStatus('pending');
+  if(saveTimer)clearTimeout(saveTimer);
+  saveTimer=setTimeout(saveState,700);
+}
+
+function saveState(){
+  if(!sb)return;
+  setSyncStatus('syncing');
+  sb.from('gallery_state').upsert({
+    workspace_id:WORKSPACE_ID,
+    state:gatherState()
+  },{onConflict:'workspace_id'})
+    .then(function(res){
+      if(res.error)throw res.error;
+      setSyncStatus('synced');
+    })
+    .catch(function(e){
+      console.error('Supabase save failed:',e);
+      setSyncStatus('error');
+    });
+}
+
+function onLabelsCheckChange(){
+  var f=FIGS[currentIdx];
+  labelsShownOverride[f.id]=document.getElementById('showLabels').checked;
+  queueSave();
+  updateChart();
+}
+
+function onLabelStyleChange(){
+  queueSave();
+  updateChart();
+}
+
+
+// Reference-line plugin (vertical dashed line at a given x-value, e.g. LDR threshold=100)
+var refLinePlugin={
+  id:'refLine',
+  afterDatasetsDraw:function(chart){
+    var opts=chart.options.plugins&&chart.options.plugins.refLine;
+    if(!opts||opts.value==null)return;
+    var sx=chart.scales.x;if(!sx)return;
+    var x=sx.getPixelForValue(opts.value);
+    var c=chart.ctx;
+    c.save();
+    c.strokeStyle=opts.color||'#dc2626';
+    c.lineWidth=opts.lineWidth||1.5;
+    c.setLineDash(opts.dash||[5,5]);
+    c.beginPath();
+    c.moveTo(x,chart.chartArea.top);
+    c.lineTo(x,chart.chartArea.bottom);
+    c.stroke();
+    c.restore();
+  }
+};
+Chart.register(refLinePlugin);
+Chart.defaults.devicePixelRatio=2;
+var chart=null,currentIdx=0;
+
+var FIGS=[
+// ============ Fig 1 ============
+{
+  id:'nominalPDRB',
+  title:'10 Provinsi dengan PDRB Nominal Terbesar (2025)',
+  sub:'Triliun Rupiah',
+  type:'hbar-simple',
+  labels:['DKI JAKARTA','JAWA TIMUR','JAWA BARAT','JAWA TENGAH','SUMATERA UTARA','RIAU','BANTEN','KALIMANTAN TIMUR','SULAWESI SELATAN','SUMATERA SELATAN'],
+  data:[3926.2,3403.2,3038.7,1943.2,1236.2,1201.4,936.2,889.1,753.1,720.2],
+  xLabel:'mean of pdrb_triliun',
+  xMax:4000,
+  fmt:function(v){return v.toFixed(1)},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:true,
+  src:'Sumber: BPS, data PDRB provinsi tahun 2025'
+},
+// ============ Fig 2 ============
+{
+  id:'perKapitaTertinggi',
+  title:'10 Provinsi dengan PDRB per Kapita Tertinggi (2025)',
+  sub:'Juta Rupiah per kapita',
+  type:'hbar-simple',
+  labels:['DKI JAKARTA','KALIMANTAN TIMUR','KALIMANTAN UTARA','RIAU','KEP. RIAU','PAPUA BARAT','SULAWESI TENGAH','MALUKU UTARA','JAMBI','KALIMANTAN TENGAH'],
+  data:[367.7,208.3,208.2,176.4,172.5,139.2,131.6,97.3,92.8,84.7],
+  xLabel:'',
+  xMax:400,
+  fmt:function(v){return v.toFixed(1)},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:true,
+  src:'Sumber: BPS, data PDRB per kapita tahun 2025'
+},
+// ============ Fig 3 ============
+{
+  id:'perKapitaTerendah',
+  title:'10 Provinsi dengan PDRB per Kapita Terendah (2025)',
+  sub:'Juta Rupiah per kapita',
+  type:'hbar-simple',
+  labels:['NUSA TENGGARA TIMUR','MALUKU','NUSA TENGGARA BARAT','ACEH','SULAWESI BARAT','GORONTALO','JAWA TENGAH','BENGKULU','LAMPUNG','DI YOGYAKARTA'],
+  data:[25.8,33.7,33.7,45.8,46.7,47.5,50.8,52.3,55.0,55.0],
+  xLabel:'',
+  xMax:60,
+  fmt:function(v){return v.toFixed(1)},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:true,
+  src:'Sumber: BPS, data PDRB per kapita tahun 2025'
+},
+// ============ Fig 4 ============
+{
+  id:'struktur3SektorTerbesar',
+  title:'Struktur Ekonomi 3 Sektor - 5 Provinsi dengan PDRB Terbesar',
+  sub:'Persentase kontribusi terhadap PDRB (%)',
+  type:'stacked100-hbar',
+  labels:['DKI JAKARTA','JAWA BARAT','JAWA TENGAH','JAWA TIMUR','SUMATERA UTARA'],
+  datasets:[
+    {label:'primer',  data:[0.1,  9.0, 15.0, 14.0, 25.0]},
+    {label:'sekunder',data:[21.9, 51.0, 46.0, 41.0, 32.0]},
+    {label:'tersier', data:[78.0, 40.0, 39.0, 45.0, 43.0]}
+  ],
+  colors:[
+    {key:'primer',  label:'Primer',  def:'#6B8E4E'},
+    {key:'sekunder',label:'Sekunder',def:'#1F3A5F'},
+    {key:'tersier', label:'Tersier', def:'#8B2635'}
+  ],
+  labelsDefault:false,
+  src:'Sumber: BPS, data PDRB per sektor tahun 2025'
+},
+// ============ Fig 5 ============
+{
+  id:'struktur3SektorTerendah',
+  title:'Struktur Ekonomi 3 Sektor - 5 Provinsi dengan PDRB Terendah',
+  sub:'Persentase kontribusi terhadap PDRB (%)',
+  type:'stacked100-hbar',
+  labels:['GORONTALO','MALUKU','PAPUA','PAPUA BARAT','SULAWESI BARAT'],
+  datasets:[
+    {label:'primer',  data:[38.0, 24.0, 15.0, 30.0, 47.0]},
+    {label:'sekunder',data:[16.0, 16.0, 21.0, 48.0, 18.0]},
+    {label:'tersier', data:[46.0, 60.0, 64.0, 22.0, 35.0]}
+  ],
+  colors:[
+    {key:'primer',  label:'Primer',  def:'#6B8E4E'},
+    {key:'sekunder',label:'Sekunder',def:'#1F3A5F'},
+    {key:'tersier', label:'Tersier', def:'#8B2635'}
+  ],
+  labelsDefault:false,
+  src:'Sumber: BPS, data PDRB per sektor tahun 2025'
+},
+// ============ Fig 6 ============
+{
+  id:'inflasiPertumbuhan',
+  title:'Hubungan Inflasi dan Pertumbuhan Ekonomi (2025)',
+  sub:'Scatter plot lintas provinsi dengan garis regresi linier',
+  type:'scatter',
+  xLabel:'Inflasi Desember (YoY) (%)',
+  yLabel:'Pertumbuhan PDRB (%)',
+  xMin:0,xMax:8,yMin:0,yMax:40,
+  points:[
+    {x:1.2,y:5.3},{x:1.5,y:5.2},{x:1.6,y:34.2},{x:2.2,y:5.0},{x:2.4,y:4.8},
+    {x:2.5,y:5.2},{x:2.5,y:4.9},{x:2.6,y:4.7},{x:2.6,y:5.3},{x:2.7,y:4.9},
+    {x:2.7,y:5.5},{x:2.7,y:5.2},{x:2.7,y:5.1},{x:2.8,y:5.2},{x:2.8,y:4.2},
+    {x:2.9,y:4.5},{x:2.9,y:5.5},{x:3.0,y:5.0},{x:3.0,y:5.7},{x:3.1,y:3.2},
+    {x:3.2,y:3.8},{x:3.2,y:5.3},{x:3.3,y:5.0},{x:3.4,y:8.5},{x:3.5,y:7.2},
+    {x:3.5,y:4.8},{x:3.6,y:5.0},{x:3.6,y:3.5},{x:3.6,y:5.2},{x:3.8,y:5.3},
+    {x:4.7,y:4.5},{x:5.0,y:3.3},{x:5.1,y:4.6},{x:6.7,y:2.9}
+  ],
+  trend:{slope:-0.25,intercept:5.75,xStart:1.2,xEnd:6.7},
+  colors:[
+    {key:'dots', label:'Dots', def:'#8B2635'},
+    {key:'trend',label:'Trend',def:'#1B2A4A'}
+  ],
+  labelsDefault:false,
+  src:'Sumber: BPS & BI, data tahun 2025'
+},
+// ============ Fig 7 ============
+{
+  id:'investasiPertumbuhan',
+  title:'Hubungan Realisasi Investasi dan Pertumbuhan Ekonomi (2025)',
+  sub:'Scatter plot lintas provinsi dengan garis regresi linier',
+  type:'scatter',
+  xLabel:'Log Investasi',
+  yLabel:'Pertumbuhan PDRB (%)',
+  xMin:14,xMax:20,yMin:0,yMax:40,
+  points:[
+    {x:14.0,y:4.3},{x:14.0,y:3.8},{x:14.1,y:5.0},{x:14.3,y:5.0},{x:14.5,y:4.5},
+    {x:14.9,y:4.8},{x:15.0,y:4.8},{x:15.2,y:4.2},{x:15.5,y:5.2},{x:15.6,y:6.5},
+    {x:15.8,y:4.0},{x:15.9,y:4.5},{x:16.0,y:3.5},{x:16.0,y:6.0},{x:16.2,y:5.0},
+    {x:16.5,y:5.0},{x:16.8,y:4.8},{x:17.0,y:5.3},{x:17.0,y:3.5},{x:17.1,y:5.2},
+    {x:17.3,y:5.5},{x:17.3,y:4.8},{x:17.5,y:3.3},{x:17.6,y:5.2},{x:17.6,y:5.0},
+    {x:17.8,y:7.0},{x:18.0,y:5.0},{x:18.3,y:34.2},{x:18.5,y:6.0},{x:18.7,y:5.0},
+    {x:18.9,y:8.5},{x:19.0,y:4.8},{x:19.3,y:5.2},{x:19.5,y:5.5},{x:19.5,y:5.3}
+  ],
+  trend:{slope:0.5,intercept:-3,xStart:14,xEnd:19.5},
+  colors:[
+    {key:'dots', label:'Dots', def:'#8B2635'},
+    {key:'trend',label:'Trend',def:'#1B2A4A'}
+  ],
+  labelsDefault:false,
+  src:'Sumber: BKPM & BPS, data tahun 2025'
+},
+// ============ Fig 8: Loan-to-Deposit Ratio ============
+{
+  id:'ldr',
+  title:'Loan-to-Deposit Ratio berdasarkan Provinsi (2024)',
+  sub:'Rasio kredit terhadap DPK, dalam persen. Garis merah putus-putus menandakan threshold 100%.',
+  type:'hbar-simple',
+  labels:['GORONTALO','MALUKU UTARA','SULAWESI BARAT','SULAWESI TENGAH','NUSA TENGGARA BARAT','SULAWESI UTARA','BENGKULU','KALIMANTAN TENGAH','JAMBI','SUMATERA SELATAN','SULAWESI TENGGARA','BANTEN','LAMPUNG','NUSA TENGGARA TIMUR','SUMATERA BARAT','JAWA BARAT','SULAWESI SELATAN','MALUKU','PAPUA BARAT','RIAU','KALIMANTAN BARAT','ACEH','KALIMANTAN UTARA','KALIMANTAN TIMUR','JAWA TENGAH','KALIMANTAN SELATAN','KEP. BANGKA BELITUNG','PAPUA','JAWA TIMUR','SUMATERA UTARA','KEP. RIAU','DI YOGYAKARTA','BALI','DKI JAKARTA'],
+  data:[318,250,245,240,230,210,195,185,175,162,160,155,150,145,140,140,135,130,125,125,120,115,115,115,110,110,105,100,95,90,80,75,70,60],
+  xLabel:'mean of ldr',
+  xMax:320,
+  refLine:{value:100,color:'#dc2626',dash:[6,5]},
+  fmt:function(v){return v.toFixed(0)},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  height:720,
+  src:'Sumber: OJK, data perbankan 2024'
+},
+// ============ Fig 9: Rasio NPL per Kawasan ============
+{
+  id:'nplKawasan',
+  title:'Rata-Rata Rasio NPL per Kawasan',
+  sub:'Non-performing loan ratio, rata-rata per kawasan regional',
+  type:'vbar-simple',
+  labels:['Sulawesi','Jawa','Maluku & Papua','Bali & Nusra','Sumatera','Kalimantan'],
+  data:[3.18,2.46,2.22,2.20,2.04,1.90],
+  yLabel:'Rata-rata NPL (%)',
+  yMax:3.3,
+  yStep:1,
+  fmt:function(v){return v.toFixed(2)+'%'},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: OJK, data perbankan regional 2024'
+},
+// ============ Fig 10: Porsi Kredit UMKM per Kawasan ============
+{
+  id:'umkmKawasan',
+  title:'Rata-Rata Porsi Kredit UMKM per Kawasan (2024)',
+  sub:'Porsi kredit UMKM dari total kredit, rata-rata per kawasan regional',
+  type:'vbar-simple',
+  labels:['Bali & Nusra','Sulawesi','Sumatera','Maluku & Papua','Kalimantan','Jawa'],
+  data:[32.5,30.7,30.2,25.2,24.0,20.5],
+  yLabel:'Porsi Kredit UMKM (%)',
+  yMax:35,
+  yStep:10,
+  fmt:function(v){return v.toFixed(1)+'%'},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: OJK, data perbankan regional 2024'
+},
+// ============ Fig 11: Distribusi Tipologi Ekonomi ============
+{
+  id:'tipologi',
+  title:'Distribusi Tipologi Ekonomi Provinsi (2024)',
+  sub:'Jumlah provinsi berdasarkan sektor dominan dalam PDRB',
+  type:'vbar-simple',
+  labels:['Dominan Primer','Dominan Sekunder','Dominan Tersier'],
+  data:[8,6,20],
+  yLabel:'Jumlah Provinsi',
+  yMax:22,
+  yStep:5,
+  fmt:function(v){return v.toFixed(0)},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: BPS, klasifikasi sektor dominan PDRB 2024'
+},
+// ============ Fig 12: Konsentrasi HHI 3-Sektor ============
+{
+  id:'hhi',
+  title:'Konsentrasi Struktur Ekonomi (HHI 3-Sektor)',
+  sub:'Herfindahl-Hirschman Index dihitung atas 3 sektor (primer, sekunder, tersier)',
+  type:'hbar-simple',
+  labels:['DKI JAKARTA','BALI','DI YOGYAKARTA','KEP. RIAU','PAPUA','BANTEN','MALUKU','NUSA TENGGARA TIMUR','BENGKULU','JAWA BARAT','SUMATERA BARAT','ACEH','NUSA TENGGARA BARAT','SULAWESI UTARA','JAWA TIMUR','JAWA TENGAH','GORONTALO','SULAWESI BARAT','JAMBI','SULAWESI TENGAH','RIAU','KALIMANTAN SELATAN','PAPUA BARAT','KALIMANTAN TIMUR','SULAWESI SELATAN','SULAWESI TENGGARA','KALIMANTAN UTARA','KALIMANTAN BARAT','SUMATERA UTARA','KALIMANTAN TENGAH','KEP. BANGKA BELITUNG','LAMPUNG','SUMATERA SELATAN','MALUKU UTARA'],
+  data:[6500,5300,5200,4750,4650,4550,4500,4400,4350,4300,4200,4050,4000,4000,3950,3900,3900,3850,3850,3850,3800,3750,3700,3700,3700,3700,3650,3600,3550,3500,3500,3450,3400,3350],
+  xLabel:'mean of hhi_3sektor',
+  xMax:7000,
+  fmt:function(v){return v.toFixed(0)},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  height:720,
+  src:'Sumber: BPS, kalkulasi HHI dari PDRB per sektor 2024'
+},
+// ============ Fig 13: Populasi Terbesar ============
+{
+  id:'populasiTerbesar',
+  title:'5 Provinsi dengan Jumlah Populasi Terbesar (2025)',
+  sub:'Ribu Jiwa',
+  type:'hbar-simple',
+  labels:['JAWA BARAT','JAWA TIMUR','JAWA TENGAH','SUMATERA UTARA','BANTEN'],
+  data:[51000,42000,38000,16000,12500],
+  xLabel:'Penduduk (Ribu Jiwa)',
+  xMax:55000,
+  fmt:function(v){return (v/1000).toFixed(1)+'K'},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: BPS, proyeksi populasi 2025'
+},
+// ============ Fig 14: Kepadatan Penduduk Tertinggi ============
+{
+  id:'kepadatan',
+  title:'5 Provinsi dengan Kepadatan Penduduk Tertinggi (2025)',
+  sub:'Jiwa per kilometer persegi',
+  type:'hbar-simple',
+  labels:['DKI JAKARTA','JAWA BARAT','BANTEN','DI YOGYAKARTA','JAWA TENGAH'],
+  data:[16000,1500,1400,1200,1100],
+  xLabel:'Penduduk per Km2',
+  xMax:17000,
+  fmt:function(v){return v.toFixed(0)},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: BPS, kepadatan penduduk 2025'
+},
+// ============ Fig 15: Populasi Working Age ============
+{
+  id:'workingAge',
+  title:'10 Provinsi dengan Populasi Working Age Tertinggi',
+  sub:'Struktur demografis: Under 14, Working Age (15-64), dan 65+ dalam persen',
+  type:'stacked100-hbar',
+  labels:['DKI JAKARTA','KALIMANTAN SELATAN','KALIMANTAN TENGAH','BANTEN','SULAWESI UTARA','BALI','JAWA TIMUR','GORONTALO','KALIMANTAN TIMUR','JAMBI'],
+  datasets:[
+    {label:'Under 14',    data:[20, 25, 25, 26, 22, 21, 21, 26, 27, 25]},
+    {label:'Working Age', data:[72, 69, 70, 69, 70, 70, 67, 69, 69, 70]},
+    {label:'65+',         data:[ 8,  6,  5,  5,  8,  9, 12,  5,  4,  5]}
+  ],
+  colors:[
+    {key:'Under 14',   label:'Under 14',   def:'#C0C0C0'},
+    {key:'Working Age',label:'Working Age',def:'#8B2635'},
+    {key:'65+',        label:'65+',        def:'#1F3A5F'}
+  ],
+  labelsDefault:false,
+  height:520,
+  src:'Sumber: BPS, struktur umur populasi 2025'
+},
+// ============ Fig 16: PDRB Per Kapita Riil Tertinggi ============
+{
+  id:'pdrbRiilTertinggi',
+  title:'5 Provinsi dengan PDRB Per Kapita Riil Tertinggi (2025)',
+  sub:'PDRB per kapita atas dasar harga konstan, Ribu IDR',
+  type:'hbar-simple',
+  labels:['DKI JAKARTA','KALIMANTAN TIMUR','KALIMANTAN UTARA','KEP. RIAU','PAPUA BARAT'],
+  data:[210000,140000,102000,100000,85000],
+  xLabel:'PDRB per Kapita',
+  xMax:220000,
+  fmt:function(v){return (v/1000).toFixed(0)+'K'},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: BPS, PDRB ADHK per kapita 2025'
+},
+// ============ Fig 17: PDRB Per Kapita Riil Terendah ============
+{
+  id:'pdrbRiilTerendah',
+  title:'5 Provinsi dengan PDRB Per Kapita Riil Terendah (2025)',
+  sub:'PDRB per kapita atas dasar harga konstan, Ribu IDR',
+  type:'hbar-simple',
+  labels:['BENGKULU','SULAWESI BARAT','MALUKU','NTB','NTT'],
+  data:[26500,25500,19500,19500,14000],
+  xLabel:'PDRB per Kapita',
+  xMax:30000,
+  fmt:function(v){return (v/1000).toFixed(1)+'K'},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: BPS, PDRB ADHK per kapita 2025'
+},
+// ============ Fig 18: Share Non-Makanan Tertinggi ============
+{
+  id:'nonMakananTertinggi',
+  title:'5 Provinsi dengan Share Non-Makanan Tertinggi (2025)',
+  sub:'Komposisi pengeluaran rumah tangga: Makanan vs Non-Makanan (%)',
+  type:'stacked100-hbar',
+  labels:['DKI JAKARTA','DI YOGYAKARTA','BALI','KEP. RIAU','KALIMANTAN TIMUR'],
+  datasets:[
+    {label:'Makanan',    data:[38, 40, 42, 44, 45]},
+    {label:'Non-Makanan',data:[62, 60, 58, 56, 55]}
+  ],
+  colors:[
+    {key:'Makanan',    label:'Makanan',    def:'#8B2635'},
+    {key:'Non-Makanan',label:'Non-Makanan',def:'#A0A0A0'}
+  ],
+  labelsDefault:false,
+  src:'Sumber: BPS Susenas, komposisi pengeluaran rumah tangga 2025'
+},
+// ============ Fig 19: Share Non-Makanan Terendah ============
+{
+  id:'nonMakananTerendah',
+  title:'5 Provinsi dengan Share Non-Makanan Terendah (2025)',
+  sub:'Komposisi pengeluaran rumah tangga: Makanan vs Non-Makanan (%)',
+  type:'stacked100-hbar',
+  labels:['SUMATERA SELATAN','NTB','NTT','SUMATERA UTARA','ACEH'],
+  datasets:[
+    {label:'Makanan',    data:[54, 54, 55, 55, 57]},
+    {label:'Non-Makanan',data:[46, 46, 45, 45, 43]}
+  ],
+  colors:[
+    {key:'Makanan',    label:'Makanan',    def:'#8B2635'},
+    {key:'Non-Makanan',label:'Non-Makanan',def:'#A0A0A0'}
+  ],
+  labelsDefault:false,
+  src:'Sumber: BPS Susenas, komposisi pengeluaran rumah tangga 2025'
+},
+// ============ Fig 20: Status Kepemilikan Tempat Tinggal ============
+{
+  id:'kepemilikan',
+  title:'Status Kepemilikan Tempat Tinggal Menurut Provinsi (2025)',
+  sub:'Distribusi status kepemilikan rumah tangga per provinsi (%) — catatan: data asli buram, nilai merupakan estimasi',
+  type:'stacked100-hbar',
+  labels:['NUSA TENGGARA TIMUR','LAMPUNG','SULAWESI TENGGARA','SULAWESI BARAT','KALIMANTAN BARAT','NUSA TENGGARA BARAT','MALUKU UTARA','BENGKULU','JAWA TIMUR','SULAWESI TENGAH','KEP. BANGKA BELITUNG','BALI','SULAWESI SELATAN','JAWA TENGAH','JAMBI','MALUKU','BANTEN','SUMATERA SELATAN','KALIMANTAN SELATAN','ACEH','SULAWESI UTARA','DI YOGYAKARTA','KEP. RIAU','GORONTALO','KALIMANTAN TENGAH','PAPUA','JAWA BARAT','PAPUA BARAT','RIAU','KALIMANTAN UTARA','KALIMANTAN TIMUR','SUMATERA UTARA','SUMATERA BARAT','DKI JAKARTA'],
+  datasets:[
+    {label:'Rumah Sendiri',data:[92,91,91,91,90,90,89,89,88,88,87,86,85,85,85,84,83,82,82,81,80,79,77,76,75,74,72,71,69,66,65,62,58,55]},
+    {label:'Rumah Sewa',   data:[ 2, 3, 3, 3, 3, 3, 4, 4, 5, 4, 5, 6, 6, 6, 6, 6, 9, 8, 8, 7, 8,10,14, 9,10, 8,16,10,17,18,20,20,24,35]},
+    {label:'Bebas Sewa',   data:[ 4, 4, 4, 4, 5, 5, 5, 5, 5, 6, 6, 6, 7, 7, 7, 8, 6, 8, 8, 9, 9, 9, 6,11,11,12, 9,12,10,11,10,14,14, 7]},
+    {label:'Rumah Dinas',  data:[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 1, 2, 3, 3, 5, 2, 6, 3, 4, 4, 3, 3, 2]},
+    {label:'Lainnya',      data:[ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]}
+  ],
+  colors:[
+    {key:'Rumah Sendiri',label:'Sendiri',def:'#8B2635'},
+    {key:'Rumah Sewa',   label:'Sewa',   def:'#C0C0C0'},
+    {key:'Bebas Sewa',   label:'Bebas',  def:'#909090'},
+    {key:'Rumah Dinas',  label:'Dinas',  def:'#606060'},
+    {key:'Lainnya',      label:'Lainnya',def:'#404040'}
+  ],
+  labelsDefault:false,
+  height:720,
+  src:'Sumber: BPS Susenas, status kepemilikan rumah 2025 (nilai estimasi)'
+},
+// ============ Fig 21: Kepemilikan Motor ============
+{
+  id:'kepemilikanMotor',
+  title:'5 Provinsi dengan Kepemilikan Motor Tertinggi (2025)',
+  sub:'Persentase rumah tangga yang memiliki sepeda motor',
+  type:'hbar-simple',
+  labels:['KEP. BANGKA BELITUNG','BALI','KALIMANTAN TIMUR','RIAU','JAMBI'],
+  data:[92,91,90,89,88],
+  xLabel:'Persentase Rumah Tangga (%)',
+  xMax:100,
+  fmt:function(v){return v.toFixed(0)+'%'},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: BPS Susenas, kepemilikan aset rumah tangga 2025'
+},
+// ============ Fig 22: Kepemilikan Emas ============
+{
+  id:'kepemilikanEmas',
+  title:'5 Provinsi dengan Kepemilikan Emas/Perhiasan di atas 10 gram Tertinggi (2025)',
+  sub:'Persentase rumah tangga yang memiliki emas/perhiasan di atas 10 gram',
+  type:'hbar-simple',
+  labels:['KALIMANTAN TIMUR','BALI','SULAWESI SELATAN','DI YOGYAKARTA','KALIMANTAN SELATAN'],
+  data:[27,25,24,22,22],
+  xLabel:'Persentase Rumah Tangga (%)',
+  xMax:30,
+  fmt:function(v){return v.toFixed(0)+'%'},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: BPS Susenas, kepemilikan aset rumah tangga 2025'
+},
+// ============ Fig 23: TPAK Tertinggi ============
+{
+  id:'tpak',
+  title:'5 Provinsi dengan TPAK Tertinggi (2025)',
+  sub:'Tingkat Partisipasi Angkatan Kerja — Top 5 Provinsi, 2025',
+  type:'hbar-simple',
+  labels:['BALI','NTB','NTT','DI YOGYAKARTA','JAWA TENGAH'],
+  data:[77,76,75,74,74],
+  xLabel:'Persentase (%)',
+  xMax:80,
+  fmt:function(v){return v.toFixed(0)+'%'},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: BPS Sakernas, TPAK 2025'
+},
+// ============ Fig 24: Tingkat Pengangguran ============
+{
+  id:'pengangguran',
+  title:'5 Provinsi dengan Tingkat Pengangguran Tertinggi (2025)',
+  sub:'Tingkat Pengangguran Terbuka (TPT)',
+  type:'hbar-simple',
+  labels:['PAPUA','JAWA BARAT','BANTEN','KEP. RIAU','MALUKU'],
+  data:[7.0,6.8,6.7,6.5,6.3],
+  xLabel:'Persentase (%)',
+  xMax:8,
+  fmt:function(v){return v.toFixed(1)+'%'},
+  colors:[{key:'bar',label:'Bar',def:'#8B2635'}],
+  labelsDefault:false,
+  src:'Sumber: BPS Sakernas, TPT 2025'
+}
+];
+
+// Per-chart color state
+var colorState=FIGS.map(function(f){
+  return f.colors.reduce(function(o,c){o[c.key]=c.def;return o},{});
+});
+
+function buildColorControls(){
+  var container=document.getElementById('colorControls');
+  container.innerHTML='';
+  var f=FIGS[currentIdx];
+  f.colors.forEach(function(c){
+    var wrap=document.createElement('span');
+    wrap.style.display='inline-flex';
+    wrap.style.alignItems='center';
+    wrap.style.gap='4px';
+    wrap.style.marginRight='8px';
+    var lbl=document.createElement('span');
+    lbl.textContent=c.label+':';
+    lbl.style.fontSize='12px';
+    lbl.style.color='#5a5e6b';
+    lbl.style.fontWeight='500';
+    var picker=document.createElement('input');
+    picker.type='color';
+    picker.value=colorState[currentIdx][c.key];
+    picker.dataset.key=c.key;
+    picker.addEventListener('input',function(e){
+      colorState[currentIdx][c.key]=e.target.value;
+      queueSave();
+      updateChart();
+    });
+    wrap.appendChild(lbl);
+    wrap.appendChild(picker);
+    container.appendChild(wrap);
+  });
+}
+
+function resetColors(){
+  var f=FIGS[currentIdx];
+  colorState[currentIdx]=f.colors.reduce(function(o,c){o[c.key]=c.def;return o},{});
+  buildColorControls();
+  queueSave();
+  updateChart();
+}
+
+function buildLegend(f){
+  var el=document.getElementById('cLegend');
+  el.innerHTML='';
+  if(f.type==='hbar-simple')return;
+  if(f.type==='stacked100-hbar'){
+    f.datasets.forEach(function(d){
+      var s=document.createElement('span');
+      s.className='legend-item';
+      s.innerHTML='<span class="legend-swatch" style="background:'+colorState[currentIdx][d.label]+'"></span>'+d.label;
+      el.appendChild(s);
+    });
+    return;
+  }
+  if(f.type==='scatter'){
+    var s1=document.createElement('span');
+    s1.className='legend-item';
+    s1.innerHTML='<span class="legend-swatch" style="background:'+colorState[currentIdx].dots+';border-radius:50%"></span>Data point';
+    el.appendChild(s1);
+    var s2=document.createElement('span');
+    s2.className='legend-item';
+    s2.innerHTML='<span style="width:20px;height:2px;background:'+colorState[currentIdx].trend+';display:inline-block"></span>Regresi linier';
+    el.appendChild(s2);
+    return;
+  }
+}
+
+function getLabelOptions(){
+  return {
+    show:document.getElementById('showLabels').checked,
+    style:document.getElementById('labelStyle').value
+  };
+}
+
+function boxedStyle(lbl,baseColor){
+  if(lbl.style==='boxed'){
+    return {
+      color:baseColor||'#1B2A4A',
+      backgroundColor:'#ffffff',
+      borderColor:'#d1d5db',
+      borderWidth:1,
+      borderRadius:4,
+      padding:{top:3,bottom:3,left:6,right:6}
+    };
+  }
+  return {
+    color:baseColor||'#1B2A4A',
+    backgroundColor:null,
+    borderColor:null,
+    borderWidth:0,
+    borderRadius:0,
+    padding:null
+  };
+}
+
+function showChart(idx){
+  currentIdx=idx;
+  document.querySelectorAll('.fig-btn').forEach(function(b,i){b.classList.toggle('active',i===idx)});
+  var f=FIGS[idx];
+  document.getElementById('cTitle').textContent=f.title;
+  document.getElementById('cSubtitle').textContent=f.sub;
+  document.getElementById('cSource').textContent=f.src;
+  document.getElementById('showLabels').checked=getLabelsShown(idx);
+  buildColorControls();
+  updateChart();
+  applyDimensions();
+  syncSizeInputs();
+}
+
+function updateChart(){
+  if(chart){chart.destroy();chart=null;}
+  var f=FIGS[currentIdx];
+  var ctx=document.getElementById('mainCanvas');
+  var cs=colorState[currentIdx];
+  var lbl=getLabelOptions();
+  buildLegend(f);
+  if(f.type==='hbar-simple'){renderHBarSimple(ctx,f,cs,lbl);}
+  else if(f.type==='vbar-simple'){renderVBarSimple(ctx,f,cs,lbl);}
+  else if(f.type==='stacked100-hbar'){renderStacked100HBar(ctx,f,cs,lbl);}
+  else if(f.type==='scatter'){renderScatter(ctx,f,cs,lbl);}
+}
+
+function renderHBarSimple(ctx,f,cs,lbl){
+  var bs=boxedStyle(lbl,'#1B2A4A');
+  var dl={
+    display:lbl.show,
+    anchor:'end',
+    align:'right',
+    offset:6,
+    color:bs.color,
+    backgroundColor:bs.backgroundColor,
+    borderColor:bs.borderColor,
+    borderWidth:bs.borderWidth,
+    borderRadius:bs.borderRadius,
+    padding:bs.padding,
+    font:{size:11,weight:'600'},
+    formatter:f.fmt||function(v){return v}
+  };
+  chart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:f.labels,
+      datasets:[{
+        data:f.data,
+        backgroundColor:cs.bar,
+        borderWidth:0,
+        barPercentage:0.72,
+        categoryPercentage:0.82
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,
+      maintainAspectRatio:false,
+      layout:{padding:{right:64,top:8,left:4}},
+      scales:{
+        x:{
+          beginAtZero:true,
+          max:f.xMax,
+          grid:{display:true,color:'#eee'},
+          ticks:{font:{size:11},color:'#888'},
+          title:f.xLabel?{display:true,text:f.xLabel,font:{size:11},color:'#666',padding:{top:6}}:{display:false},
+          border:{display:false}
+        },
+        y:{
+          grid:{display:false},
+          ticks:{font:{size:12,weight:'500'},color:'#1B2A4A'},
+          border:{display:false}
+        }
+      },
+      plugins:{
+        legend:{display:false},
+        datalabels:dl,
+        tooltip:{backgroundColor:'#1B2A4A',cornerRadius:6,padding:10},
+        refLine:f.refLine||{value:null}
+      },
+      animation:{duration:300}
+    }
+  });
+}
+
+function renderVBarSimple(ctx,f,cs,lbl){
+  var bs=boxedStyle(lbl,'#1B2A4A');
+  var dl={
+    display:lbl.show,
+    anchor:'end',
+    align:'top',
+    offset:4,
+    color:bs.color,
+    backgroundColor:bs.backgroundColor,
+    borderColor:bs.borderColor,
+    borderWidth:bs.borderWidth,
+    borderRadius:bs.borderRadius,
+    padding:bs.padding,
+    font:{size:11,weight:'600'},
+    formatter:f.fmt||function(v){return v}
+  };
+  chart=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels:f.labels,
+      datasets:[{
+        data:f.data,
+        backgroundColor:cs.bar,
+        borderWidth:0,
+        barPercentage:0.6,
+        categoryPercentage:0.85
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      layout:{padding:{top:24,right:12,left:4}},
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{font:{size:12},color:'#1B2A4A'},
+          border:{display:true,color:'#d1d5db'}
+        },
+        y:{
+          beginAtZero:true,
+          max:f.yMax,
+          grid:{display:true,color:'#eee'},
+          ticks:{
+            font:{size:11},color:'#888',
+            stepSize:f.yStep,
+            includeBounds:false,
+            callback:function(v){
+              // Hide tick labels that aren't clean multiples of stepSize
+              if(f.yStep&&Math.abs(v%f.yStep)>1e-9)return '';
+              return v;
+            }
+          },
+          title:f.yLabel?{display:true,text:f.yLabel,font:{size:11},color:'#666',padding:{bottom:6}}:{display:false},
+          border:{display:false}
+        }
+      },
+      plugins:{
+        legend:{display:false},
+        datalabels:dl,
+        tooltip:{backgroundColor:'#1B2A4A',cornerRadius:6,padding:10}
+      },
+      animation:{duration:300}
+    }
+  });
+}
+
+function renderStacked100HBar(ctx,f,cs,lbl){
+  var datasets=f.datasets.map(function(d){
+    // For stacked: if boxed, use white bg with segment color text; if simple, use white text
+    var dlColor,dlBg,dlBorder,dlBw,dlBr,dlPad;
+    if(lbl.style==='boxed'){
+      dlColor='#1B2A4A';
+      dlBg='#ffffff';
+      dlBorder='#d1d5db';
+      dlBw=1;dlBr=4;
+      dlPad={top:2,bottom:2,left:5,right:5};
+    } else {
+      dlColor='#ffffff';
+      dlBg=null;dlBorder=null;dlBw=0;dlBr=0;dlPad=null;
+    }
+    return {
+      label:d.label,
+      data:d.data,
+      backgroundColor:cs[d.label],
+      borderWidth:0,
+      barPercentage:0.72,
+      categoryPercentage:0.82,
+      datalabels:{
+        display:function(ctx){
+          if(!lbl.show)return false;
+          return d.data[ctx.dataIndex]>=3.5; // hide on tiny segments
+        },
+        anchor:'center',
+        align:'center',
+        color:dlColor,
+        backgroundColor:dlBg,
+        borderColor:dlBorder,
+        borderWidth:dlBw,
+        borderRadius:dlBr,
+        padding:dlPad,
+        font:{size:10,weight:'600'},
+        formatter:function(v){return v.toFixed(0)}
+      }
+    };
+  });
+  chart=new Chart(ctx,{
+    type:'bar',
+    data:{labels:f.labels,datasets:datasets},
+    options:{
+      indexAxis:'y',
+      responsive:true,
+      maintainAspectRatio:false,
+      layout:{padding:{right:12,top:8,left:4}},
+      scales:{
+        x:{
+          stacked:true,
+          beginAtZero:true,
+          max:100,
+          grid:{display:true,color:'#eee'},
+          ticks:{font:{size:11},color:'#888',stepSize:20},
+          border:{display:false}
+        },
+        y:{
+          stacked:true,
+          grid:{display:false},
+          ticks:{font:{size:12,weight:'500'},color:'#1B2A4A'},
+          border:{display:false}
+        }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{backgroundColor:'#1B2A4A',cornerRadius:6,padding:10,callbacks:{label:function(c){return c.dataset.label+': '+c.parsed.x.toFixed(1)+'%'}}}
+      },
+      animation:{duration:300}
+    }
+  });
+}
+
+function renderScatter(ctx,f,cs,lbl){
+  var tl=[
+    {x:f.trend.xStart,y:f.trend.slope*f.trend.xStart+f.trend.intercept},
+    {x:f.trend.xEnd,  y:f.trend.slope*f.trend.xEnd  +f.trend.intercept}
+  ];
+  var bs=boxedStyle(lbl,'#1B2A4A');
+  chart=new Chart(ctx,{
+    data:{
+      datasets:[
+        {
+          type:'line',
+          label:'Trend',
+          data:tl,
+          borderColor:cs.trend,
+          backgroundColor:'transparent',
+          borderWidth:1.5,
+          pointRadius:0,
+          tension:0,
+          fill:false,
+          order:2,
+          datalabels:{display:false}
+        },
+        {
+          type:'scatter',
+          label:'Provinsi',
+          data:f.points,
+          backgroundColor:cs.dots,
+          borderColor:cs.dots,
+          pointRadius:5,
+          pointHoverRadius:7,
+          order:1,
+          datalabels:{
+            display:lbl.show,
+            anchor:'end',
+            align:'top',
+            offset:4,
+            color:bs.color,
+            backgroundColor:bs.backgroundColor,
+            borderColor:bs.borderColor,
+            borderWidth:bs.borderWidth,
+            borderRadius:bs.borderRadius,
+            padding:bs.padding,
+            font:{size:9,weight:'600'},
+            formatter:function(v){return '('+v.x.toFixed(1)+', '+v.y.toFixed(1)+')'}
+          }
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      layout:{padding:{top:10,right:12,left:4}},
+      scales:{
+        x:{
+          type:'linear',
+          min:f.xMin,
+          max:f.xMax,
+          grid:{display:true,color:'#eee'},
+          ticks:{font:{size:11},color:'#888'},
+          title:{display:true,text:f.xLabel,font:{size:12},color:'#666',padding:{top:6}},
+          border:{display:true,color:'#d1d5db'}
+        },
+        y:{
+          min:f.yMin,
+          max:f.yMax,
+          grid:{display:true,color:'#eee'},
+          ticks:{font:{size:11},color:'#888'},
+          title:{display:true,text:f.yLabel,font:{size:12},color:'#666',padding:{bottom:6}},
+          border:{display:true,color:'#d1d5db'}
+        }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{backgroundColor:'#1B2A4A',cornerRadius:6,padding:10,callbacks:{label:function(c){return '('+c.parsed.x.toFixed(2)+', '+c.parsed.y.toFixed(2)+')'}}}
+      },
+      animation:{duration:300}
+    }
+  });
+}
+
+function exportPNG(){
+  if(!chart)return;
+  var a=document.createElement('a');
+  a.download=FIGS[currentIdx].id+'.png';
+  a.href=chart.toBase64Image('image/png',1);
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+(function(){
+  var wrap=document.getElementById('chartWrap'),
+      hV=document.getElementById('resizeHandle'),
+      hH=document.getElementById('resizeHandleR'),
+      hC=document.getElementById('resizeCorner'),
+      hint=document.getElementById('sizeHint');
+  var sx=0,sy=0,sw=0,sh=0,mode=null;  // mode: 'v' | 'h' | 'c' | null
+  function startDrag(m){
+    return function(e){
+      e.preventDefault();
+      mode=m;sx=e.clientX;sy=e.clientY;
+      sw=wrap.offsetWidth;sh=wrap.offsetHeight;
+      document.body.style.cursor=m==='v'?'ns-resize':m==='h'?'ew-resize':'nwse-resize';
+      document.body.style.userSelect='none';
+    };
+  }
+  hV.addEventListener('mousedown',startDrag('v'));
+  hH.addEventListener('mousedown',startDrag('h'));
+  hC.addEventListener('mousedown',startDrag('c'));
+  document.addEventListener('mousemove',function(e){
+    if(!mode)return;
+    if(mode==='v'||mode==='c'){
+      var nh=Math.max(200,Math.min(1400,sh+(e.clientY-sy)));
+      wrap.style.height=nh+'px';
+      var hi=document.getElementById('heightInput');if(hi)hi.value=Math.round(nh);
+    }
+    if(mode==='h'||mode==='c'){
+      var nw=Math.max(200,Math.min(2400,sw+(e.clientX-sx)));
+      wrap.style.width=nw+'px';
+      var wi=document.getElementById('widthInput');if(wi)wi.value=Math.round(nw);
+    }
+    if(hint)hint.textContent=Math.round(wrap.offsetWidth)+' × '+Math.round(wrap.offsetHeight)+' px  —  drag edges or edit W/H';
+    if(chart)chart.resize();
+  });
+  document.addEventListener('mouseup',function(){
+    if(!mode)return;
+    var f=FIGS[currentIdx];
+    if(!dimensionsOverride[f.id])dimensionsOverride[f.id]={};
+    if(mode==='v'||mode==='c')dimensionsOverride[f.id].h=wrap.offsetHeight;
+    if(mode==='h'||mode==='c')dimensionsOverride[f.id].w=wrap.offsetWidth;
+    mode=null;
+    document.body.style.cursor='';document.body.style.userSelect='';
+    queueSave();
+  });
+})();
+
+showChart(0);
+loadState();
+</script>
+</body>
+</html>
